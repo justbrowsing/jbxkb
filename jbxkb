@@ -1,32 +1,54 @@
 #!/usr/bin/env python2
 ###############
 ### jbxkb #####
-version=0.3 ###
+version=0.4 ###
 ###############
 
-import gtk, sys
-import commands
+import gtk, sys, commands, time, signal
 from subprocess import call
 
-keymaps = [ "us", "af", "jp", "be", "bg", "br", "by", "ca", "cn", "cz", "de", "fr" ]
+# depends: ibus, procps-ng, xkb-switch-git, xorg-setxkbmap
+# ibus addons: m17n, pinyin, skk, unikey
 
+keymaps = [ "us", "dvorak", "ar", "cn", "de", "fr", "jp", "ko", "il", "tw", "vn" ]
+fallback = "us"
+
+try:
+    input = sys.argv[1]
+except:
+    input = fallback
+
+def cleanup():
+    call(["pkill", "ibus"])
+    call(["setxkbmap", fallback])
+
+def signal_handler(signum, frame):
+    print "got signal"
+    sys.exit(1)
+
+signal.signal(signal.SIGTERM, signal_handler)
+
+
+### pygtk ###
 class trayapplet:
     def __init__(self):
-        try: 
-            input = sys.argv[1]
-        except:
-            input = "us"        
-
         self.statusicon = gtk.StatusIcon()
         self.set_layout(None, input)
         self.statusicon.connect("activate", self.left_click_event)
         self.statusicon.connect("popup-menu", self.right_click_event)
+
+    def ibus_setup(self, widget):
+        call(["ibus-daemon", "-rd"])
+        time.sleep(0.25)
+        call(["ibus", "engine", "xkb:us::eng"])
+        call(["ibus-setup"])
 
     def left_click_event(self, time):
         layout = commands.getoutput("xkb-switch")
 
         if layout in keymaps:
             get_index = keymaps.index(layout)
+
             if get_index == (len(keymaps)-1):
                 self.set_layout(None, keymaps[0])
             else:
@@ -40,9 +62,16 @@ class trayapplet:
         for layout in keymaps:
             self.add_layout(layout)
 
-        quit = gtk.MenuItem("Quit")
-        quit.connect("activate", gtk.main_quit)
-        self.menu.append(quit)
+        #quit = gtk.MenuItem("Quit")
+        #quit.connect("activate", gtk.main_quit)
+        #self.menu.append(quit)
+
+        ibus = gtk.ImageMenuItem("Settings")
+        ibus_icon = gtk.Image()
+        ibus_icon.set_from_stock(gtk.STOCK_PREFERENCES, 2)
+        ibus.set_image(ibus_icon)
+        ibus.connect("activate", self.ibus_setup)
+        self.menu.append(ibus)
 
         self.menu.show_all()
 
@@ -60,12 +89,46 @@ class trayapplet:
 		return None
 
     def set_layout(self, widget, layout):
-		call(["setxkbmap", layout])
 		self.statusicon.set_from_file("/usr/share/jbxkb/" + layout + ".png")
-		self.statusicon.set_tooltip_text(layout)
+
+		if layout == "cn":
+		    self.statusicon.set_tooltip_text("Chinese (pinyin)")
+		    call(["ibus-daemon", "-rd"])
+		    time.sleep(0.25)
+		    call(["ibus", "engine", "pinyin"])
+		elif layout == "jp":
+		    self.statusicon.set_tooltip_text("Japanese (skk)")
+		    call(["ibus-daemon", "-rd"])
+		    time.sleep(0.25)
+		    call(["ibus", "engine", "skk"])
+		elif layout == "ko":
+		    self.statusicon.set_tooltip_text("Korean (romaja)")
+		    call(["ibus-daemon", "-rd"])
+		    time.sleep(0.25)
+		    call(["ibus", "engine", "m17n:ko:romaja"])
+		elif layout == "tw":
+		    self.statusicon.set_tooltip_text("Chinese (cangjie)")
+		    call(["ibus-daemon", "-rd"])
+		    time.sleep(0.25)
+		    call(["ibus", "engine", "m17n:zh:cangjie"])
+		elif layout == "vn":
+		    self.statusicon.set_tooltip_text("Vietnamese (tcvn)")
+		    call(["ibus-daemon", "-rd"])
+		    time.sleep(0.25)
+		    call(["ibus", "engine", "m17n:vi:tcvn"])
+		else:
+		    self.statusicon.set_tooltip_text(layout)
+		    call(["pkill", "ibus"])
+		    call(["setxkbmap", layout])
+
 		return None
 
-trayapplet()
-gtk.main()
+
+### main ###
+try:
+    trayapplet()
+    gtk.main()
+finally:
+    cleanup()
 
 ### END ###
