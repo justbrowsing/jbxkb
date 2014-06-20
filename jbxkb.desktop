@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=jbxkb
+Comment=A keyboard layout switcher tray applet
+Exec=jbxkb
+Icon=jbxkb
+Categories=GNOME;Utility;
