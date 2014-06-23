@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 ####################
 ### jbxkb ##########
-version=0.5 ########
+version=0.6 ########
 ### JustBrowsing ###
 ####################
 
@@ -11,13 +11,25 @@ from subprocess import call
 # depends: ibus, procps-ng, xkb-switch-git, xorg-setxkbmap
 # ibus addons: m17n, pinyin, skk, unikey
 
-keymaps = [ "us", "de", "ara", "cn", "fr", "il", "jp", "kr", "ru", "tw", "us(dvorak)", "us(intl)", "vn" ]
+keymaps = [ "us", "ara", "cn", "de", "fr", "il", "jp", "kr", "ru", "tw", "us(dvorak)", "us(intl)", "vn" ]
 fallback = "us"
+closeEntry = True
 
 try:
     input = sys.argv[1]
 except:
     input = keymaps[0]
+
+if input == "new":
+    del keymaps[0:]
+    slice = 2
+    input = sys.argv[2]
+elif input == "noquit":
+    closeEntry = False
+    slice = 2
+    input = sys.argv[2]
+else:
+    slice = 1
 
 def cleanup():
     call(["pkill", "ibus"])
@@ -33,12 +45,14 @@ signal.signal(signal.SIGTERM, signal_handler)
 ### pygtk ###
 class trayapplet:
     def __init__(self):
+        for param in reversed(sys.argv[slice:]):
+            try:
+              keymaps.remove(param)
+            except:
+              print "notice:", param, "not in list"
+            keymaps.insert(0, param)
+
         self.statusicon = gtk.StatusIcon()
-        try:
-          keymaps.remove(input)
-        except:
-          print "not in list"
-        keymaps.insert(0, input)
         self.set_layout(None, input)
         self.statusicon.connect("activate", self.left_click_event)
         self.statusicon.connect("popup-menu", self.right_click_event)
@@ -75,12 +89,13 @@ class trayapplet:
         ibus.connect("activate", self.ibus_setup)
         self.menu.append(ibus)
 
-        quit = gtk.ImageMenuItem("Quit")
-        quit_icon = gtk.Image()
-        quit_icon.set_from_stock(gtk.STOCK_QUIT, 2)
-        quit.set_image(quit_icon)
-        quit.connect("activate", gtk.main_quit)
-        self.menu.append(quit)
+        if closeEntry:
+        	quit = gtk.ImageMenuItem("Quit")
+        	quit_icon = gtk.Image()
+        	quit_icon.set_from_stock(gtk.STOCK_QUIT, 2)
+        	quit.set_image(quit_icon)
+        	quit.connect("activate", gtk.main_quit)
+        	self.menu.append(quit)
 
         self.menu.show_all()
 
@@ -105,11 +120,16 @@ class trayapplet:
 		return None
 
     def ibus_method(self, layout, engine, tooltip):
-		self.statusicon.set_tooltip_text(tooltip)
-		call(["ibus-daemon", "-rd"])
-		time.sleep(0.25)
-		call(["ibus", "engine", engine])
-		call(["setxkbmap", layout])
+		if os.path.isfile("/usr/bin/ibus"):
+		    self.statusicon.set_tooltip_text(tooltip)
+		    call(["ibus-daemon", "-rd"])
+		    time.sleep(0.25)
+		    call(["ibus", "engine", engine])
+		    call(["setxkbmap", layout])
+		else:
+		    print "error: ibus not found"
+		    self.statusicon.set_tooltip_text("ibus missing: " + tooltip)
+		    call(["setxkbmap", layout])
 
     def set_layout(self, widget, layout):
 		if os.path.isfile("/usr/share/jbxkb/" + layout + ".png"):
