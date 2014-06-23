@@ -1,6 +1,6 @@
 # Maintainer: justbrowsing <developer4linux+aur@gmail.com>
 pkgname=jbxkb
-pkgver=0.4
+pkgver=0.5
 pkgrel=1
 pkgdesc="A pygtk keyboard layout switcher tray applet (inspired by gxkb) for JustBrowsing"
 arch=('any')
