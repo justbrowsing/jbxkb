@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 ####################
 ### jbxkb ##########
-version=0.6 ########
+version=0.7 ########
 ### JustBrowsing ###
 ####################
 
@@ -23,11 +23,17 @@ except:
 if input == "new":
     del keymaps[0:]
     slice = 2
-    input = sys.argv[2]
+    try:
+        input = sys.argv[2]
+    except:
+        input = fallback
 elif input == "noquit":
     closeEntry = False
     slice = 2
-    input = sys.argv[2]
+    try:
+        input = sys.argv[2]
+    except:
+        input = keymaps[0]
 else:
     slice = 1
 
@@ -145,6 +151,8 @@ class trayapplet:
 		    self.ibus_method("jp", "skk", "Japanese (skk)")
 		elif layout == "ko" or layout == "kr":
 		    self.ibus_method("kr", "m17n:ko:romaja", "Korean (romaja)")
+		elif layout == "th":
+		    self.ibus_method("th", "m17n:th:kesmanee", "Thai (kesmanne)")
 		elif layout == "tw":
 		    self.ibus_method("tw", "m17n:zh:cangjie", "Chinese (cangjie)")
 		else:
